@@ -1,0 +1,18 @@
+# Python
+*.pyc
+*.pyo
+__pycache__/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# pyenv
+.python-version
+
+# platform
+.DS_Store
+
+# mypy
+.mypy_cache/
