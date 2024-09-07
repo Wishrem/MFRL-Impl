@@ -35,6 +35,11 @@ class ForbiddenAreaCfg:
             np.ndarray: forbidden area locations
         """
         if self.locs is None:
+            assert self.num is not None
+            if self.num >= size[0] * size[1]:
+                raise ValueError(
+                    "Number of forbidden areas is greater than or equal to the number of grid world locations"
+                )
             np.random.seed(seed)
             return self._generate_random_locs(size)
         for x, y in self.locs:
