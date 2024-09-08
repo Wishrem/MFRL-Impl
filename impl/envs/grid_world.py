@@ -1,6 +1,7 @@
+from typing import Any
 from dataclasses import dataclass
-import numpy as np
 
+import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
@@ -21,12 +22,11 @@ class ForbiddenAreaCfg:
         if self.locs is None and self.num is None:
             raise ValueError("`locs` and `num` cannot be None at the same time")
 
-    def get_locs(self, size: tuple[int, int], seed: int = 0) -> np.ndarray:
+    def get_locs(self, size: tuple[int, int]) -> list[tuple[int, int]]:
         """Get forbidden area locations
 
         Args:
             size (tuple[int, int]): size of the grid world
-            seed (int, optional): random seed. Defaults to 0.
 
         Raises:
             ValueError: if location of forbidden area is out of bound
@@ -40,23 +40,30 @@ class ForbiddenAreaCfg:
                 raise ValueError(
                     "Number of forbidden areas is greater than or equal to the number of grid world locations"
                 )
-            np.random.seed(seed)
             return self._generate_random_locs(size)
         for x, y in self.locs:
             if (x <= -1 or x >= size[0]) or (y <= -1 or y >= size[1]):
                 raise ValueError(
                     f"Location ({x}, {y}) of forbidden area is out of bound"
                 )
-        if len(self.locs) >= size[0] * size[1] - 1:  # minus one for target location
+        if len(self.locs) >= size[0] * size[1]:
             raise ValueError(
                 "Number of forbidden areas is greater than or equal to the number of grid world locations"
             )
-        return np.array(self.locs)
+        return self.locs
 
-    def _generate_random_locs(self, size: tuple[int, int]) -> np.ndarray:
-        locs = [[i, j] for i in range(size[0]) for j in range(size[1])]
+    def _generate_random_locs(self, size: tuple[int, int]) -> list[tuple[int, int]]:
+        locs = [(i, j) for i in range(size[0]) for j in range(size[1])]
         np.random.shuffle(locs)
-        return np.array(locs[: self.num])
+        return locs[: self.num]
+
+
+@dataclass
+class RewardCfg:
+    out_of_bound: int = -1
+    forbidden_area: int = -1
+    target: int = 1
+    move: int = 0
 
 
 class GridWorldEnv(gym.Env):
@@ -67,6 +74,7 @@ class GridWorldEnv(gym.Env):
         target_loc: tuple[int, int] | None = None,
         size: int | tuple[int, int] = 5,
         forbidden_area_cfg: ForbiddenAreaCfg = ForbiddenAreaCfg(),
+        reward_cfg: RewardCfg = RewardCfg(),
     ):
         """Grid world environment
 
@@ -77,6 +85,9 @@ class GridWorldEnv(gym.Env):
             forbidden_area_cfg (ForbiddenAreaCfg, optional): forbidden area configuration. Defaults to ForbiddenAreaCfg().
         """
         self.size = size if isinstance(size, tuple) else (size, size)
+        self._rwd_cfg = reward_cfg
+        self._start_loc = np.array(start_loc)
+        self._agent_loc = self._start_loc
 
         forbidden_locs = forbidden_area_cfg.get_locs(self.size)
         if target_loc is None:
@@ -86,19 +97,44 @@ class GridWorldEnv(gym.Env):
                 "Target location is in forbidden area. If you use random forbidden area, you'd better set forbidden location manually"
             )
         self._target_loc = np.array(target_loc)
-        self._forbidden_locs = forbidden_locs
+        self._forbidden_locs = np.array(forbidden_locs)
 
         # 0: up, 1: right, 2: down, 3: left, 4: stay
         self.action_space = spaces.Discrete(5)
         self._action_to_direction = {
-            0: np.array([0, 1]),
-            1: np.array([1, 0]),
-            2: np.array([0, -1]),
-            3: np.array([-1, 0]),
+            0: np.array([-1, 0]),
+            1: np.array([0, 1]),
+            2: np.array([1, 0]),
+            3: np.array([0, -1]),
             4: np.array([0, 0]),
         }
 
-    def _generate_random_target_loc(self, forbidden_locs: np.ndarray) -> np.array:
-        locs = [[i, j] for i in range(self.size[0]) for j in range(self.size[1])]
+    def step(self, action: int):
+        direction = self._action_to_direction[action]
+        new_loc = self._agent_loc + direction
+        if np.any(new_loc < 0) or np.any(new_loc >= self.size):
+            reward = self._rwd_cfg.out_of_bound
+        elif np.all(new_loc == self._target_loc):
+            reward = self._rwd_cfg.target
+            self._agent_loc = new_loc
+        elif np.any(np.all(new_loc == self._forbidden_locs, axis=1)):
+            reward = self._rwd_cfg.forbidden_area
+            self._agent_loc = new_loc
+        else:
+            reward = self._rwd_cfg.move
+            self._agent_loc = new_loc
+
+        # observation, reward, terminated, truncated, info
+        return {}, reward, False, False, {}
+
+    def reset(self, seed: int | None = 0, options: None | dict[str, Any] = None):
+        super().reset(seed=seed)
+
+        self._agent_loc = self._start_loc
+
+        return {}, {}
+
+    def _generate_random_target_loc(self, forbidden_locs: list[tuple[int, int]]) -> tuple[int, int]:
+        locs = [(i, j) for i in range(self.size[0]) for j in range(self.size[1])]
         locs = [loc for loc in locs if loc not in forbidden_locs]
-        return np.array(locs[np.random.randint(len(locs))])
+        return locs[np.random.randint(len(locs))]
