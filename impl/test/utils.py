@@ -8,10 +8,9 @@ def is_same_array(lst, target, require_order=False):
         return False
     if not require_order:
         for item in lst:
-            for t_item in target:
-                if np.all(item == t_item):
-                    break
-            else:
-                return False
-        return True
+            if np.all(item == target, axis=1).any():
+               break
+        else:
+            return False
+        return True 
     return np.all(lst == target)
