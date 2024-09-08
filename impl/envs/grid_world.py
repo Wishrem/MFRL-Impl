@@ -99,6 +99,10 @@ class GridWorldEnv(gym.Env):
         self._target_loc = np.array(target_loc)
         self._forbidden_locs = np.array(forbidden_locs)
 
+        self.observation_space = spaces.Dict({
+            "dummy": spaces.Discrete(1)
+        })
+
         # 0: up, 1: right, 2: down, 3: left, 4: stay
         self.action_space = spaces.Discrete(5)
         self._action_to_direction = {
