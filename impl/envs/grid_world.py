@@ -83,6 +83,7 @@ class GridWorldEnv(gym.Env):
             target_loc (tuple[int, int] | None, optional): the target location. It will not with forbidden area. Defaults to None.
             size (int | tuple[int, int], optional): the size of grid world. If `size` is int type, the grid world is square. Defaults to 5.
             forbidden_area_cfg (ForbiddenAreaCfg, optional): forbidden area configuration. Defaults to ForbiddenAreaCfg().
+            reward_cfg (RewardCfg, optional): reward configuration. Defaults to RewardCfg().
         """
         self.size = size if isinstance(size, tuple) else (size, size)
         self._rwd_cfg = reward_cfg
@@ -100,7 +101,7 @@ class GridWorldEnv(gym.Env):
         self._forbidden_locs = np.array(forbidden_locs)
 
         self.observation_space = spaces.Dict({
-            "dummy": spaces.Discrete(1)
+            "agent_loc": spaces.Box(low=np.array([0, 0]), high=np.array(self.size), shape=(2,), dtype=np.int32),
         })
 
         # 0: up, 1: right, 2: down, 3: left, 4: stay
@@ -129,14 +130,24 @@ class GridWorldEnv(gym.Env):
             self._agent_loc = new_loc
 
         # observation, reward, terminated, truncated, info
-        return {}, reward, False, False, {}
+        return self._get_obs(), reward, False, False, {}
+
+    def _get_obs(self):
+        return {"agent_loc": self._agent_loc}
 
     def reset(self, seed: int | None = 0, options: None | dict[str, Any] = None):
         super().reset(seed=seed)
+        
+        if options is None:
+            self._agent_loc = self._start_loc
+            return self._get_obs(), {}
 
-        self._agent_loc = self._start_loc
-
-        return {}, {}
+        if options["agent_loc"] is not None:
+            self._agent_loc = np.array(options["agent_loc"])
+        
+        return self._get_obs(), {}
+        
+            
 
     def _generate_random_target_loc(self, forbidden_locs: list[tuple[int, int]]) -> tuple[int, int]:
         locs = [(i, j) for i in range(self.size[0]) for j in range(self.size[1])]
