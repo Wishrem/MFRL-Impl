@@ -103,7 +103,13 @@ class TestGridWorldEnv:
                            forbidden_area_cfg=ForbiddenAreaCfg(locs=[(1, 0)]),
                            reward_cfg=RewardCfg(out_of_bound=-2, forbidden_area=-1, target=1, move=0))
         
-        env.step(1) # right
-        assert is_same_array(env._agent_loc, (0, 1), True)
-        env.reset()
-        assert is_same_array(env._agent_loc, (0, 0), True)
+        obs, *_ = env.step(1) # right
+        assert is_same_array(obs["agent_loc"], (0, 1), True)
+        obs, _ = env.reset()
+        assert is_same_array(obs["agent_loc"], (0, 0), True)
+        
+        # with option: agent_loc
+        obs, _ =env.reset(options={
+            "agent_loc": (1, 1)
+        })
+        assert is_same_array(obs["agent_loc"], (1, 1), True)
