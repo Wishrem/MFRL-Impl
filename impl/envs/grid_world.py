@@ -87,7 +87,7 @@ class GridWorldEnv(gym.Env):
         """
         self.size = size if isinstance(size, tuple) else (size, size)
         self._rwd_cfg = reward_cfg
-        self._start_loc = np.array(start_loc)
+        self._start_loc = np.array(start_loc, dtype=np.int32)
         self._agent_loc = self._start_loc
 
         forbidden_locs = forbidden_area_cfg.get_locs(self.size)
@@ -100,18 +100,25 @@ class GridWorldEnv(gym.Env):
         self._target_loc = np.array(target_loc)
         self._forbidden_locs = np.array(forbidden_locs)
 
-        self.observation_space = spaces.Dict({
-            "agent_loc": spaces.Box(low=np.array([0, 0]), high=np.array(self.size), shape=(2,), dtype=np.int32),
-        })
+        self.observation_space = spaces.Dict(
+            {
+                "agent_loc": spaces.Box(
+                    low=np.array([0, 0]),
+                    high=np.array(self.size),
+                    shape=(2,),
+                    dtype=np.int32,
+                ),
+            }
+        )
 
         # 0: up, 1: right, 2: down, 3: left, 4: stay
         self.action_space = spaces.Discrete(5)
         self._action_to_direction = {
-            0: np.array([-1, 0]),
-            1: np.array([0, 1]),
-            2: np.array([1, 0]),
-            3: np.array([0, -1]),
-            4: np.array([0, 0]),
+            0: np.array([-1, 0], dtype=np.int32),
+            1: np.array([0, 1], dtype=np.int32),
+            2: np.array([1, 0], dtype=np.int32),
+            3: np.array([0, -1], dtype=np.int32),
+            4: np.array([0, 0], dtype=np.int32),
         }
 
     def step(self, action: int):
@@ -135,21 +142,21 @@ class GridWorldEnv(gym.Env):
     def _get_obs(self):
         return {"agent_loc": self._agent_loc}
 
-    def reset(self, seed: int | None = 0, options: None | dict[str, Any] = None):
+    def reset(self, seed: int | None = None, options: None | dict[str, Any] = None):
         super().reset(seed=seed)
-        
+
         if options is None:
             self._agent_loc = self._start_loc
             return self._get_obs(), {}
 
         if options["agent_loc"] is not None:
-            self._agent_loc = np.array(options["agent_loc"])
-        
-        return self._get_obs(), {}
-        
-            
+            self._agent_loc = np.array(options["agent_loc"], dtype=np.int32)
 
-    def _generate_random_target_loc(self, forbidden_locs: list[tuple[int, int]]) -> tuple[int, int]:
+        return self._get_obs(), {}
+
+    def _generate_random_target_loc(
+        self, forbidden_locs: list[tuple[int, int]]
+    ) -> tuple[int, int]:
         locs = [(i, j) for i in range(self.size[0]) for j in range(self.size[1])]
         locs = [loc for loc in locs if loc not in forbidden_locs]
         return locs[np.random.randint(len(locs))]
