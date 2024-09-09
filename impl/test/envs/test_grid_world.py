@@ -83,8 +83,13 @@ class TestGridWorldEnv:
         assert rwd == -2
         assert is_same_array(env._agent_loc, (0, 0), True)
         
-        # just move
+        # move to a normal area
         _, rwd, *_ = env.step(1) # right
+        assert rwd == 0
+        assert is_same_array(env._agent_loc, (0, 1), True)
+        
+        # stay
+        _, rwd, *_ = env.step(4) # stay
         assert rwd == 0
         assert is_same_array(env._agent_loc, (0, 1), True)
         
@@ -93,8 +98,18 @@ class TestGridWorldEnv:
         assert rwd == 1
         assert is_same_array(env._agent_loc, (1, 1), True)
         
+         # stay
+        _, rwd, *_ = env.step(4) # stay
+        assert rwd == 1
+        assert is_same_array(env._agent_loc, (1, 1), True)
+        
         # move to forbidden area
         _, rwd, *_ = env.step(3) # left
+        assert rwd == -1
+        assert is_same_array(env._agent_loc, (1, 0), True)
+        
+         # stay
+        _, rwd, *_ = env.step(4) # stay
         assert rwd == -1
         assert is_same_array(env._agent_loc, (1, 0), True)
         
