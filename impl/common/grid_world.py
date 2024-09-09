@@ -16,8 +16,8 @@ class Policy:
         Raises:
             ValueError: eps should be in [0, 1]
         """
-        
-        size = env.unwrapped.size # type: ignore
+
+        size = env.unwrapped.size  # type: ignore
         self.size = size if isinstance(size, tuple) else (size, size)
         # record the action index whose action value is maximum
         self.action_stars = np.random.randint(
@@ -43,7 +43,7 @@ class Policy:
 
         actions = [i for i in range(num_act)]
         p = []
-        
+
         idx = tuple(loc)
         action_star = self.action_stars[idx]
         for a in actions:
@@ -59,8 +59,8 @@ class Policy:
                 raise ValueError(f"loc shape should be (2,), but got {loc.shape}")
             if not np.issubdtype(loc.dtype, np.integer):
                 raise ValueError(f"loc dtype should be np.integer, but got {loc.dtype}")
-        
-        if q_values.shape != (5, ):
+
+        if q_values.shape != (5,):
             raise ValueError(
                 f"q_values shape should be {(5, )}, but got {q_values.shape}"
             )
