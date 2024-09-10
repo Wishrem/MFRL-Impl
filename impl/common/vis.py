@@ -7,6 +7,7 @@ from matplotlib.colors import ListedColormap
 from .policy import Policy
 from .utils import get_return
 
+
 class Visualizer:
 
     # white for normal area, yellow for forbidden area, blue for target area
@@ -103,27 +104,73 @@ class Visualizer:
         fig.tight_layout()
         plt.show()
 
+    def _sample_q_values(self, episode_length: int, policy: Policy, gamma: float):
+        q_values = np.empty((*self.size, 5), dtype=np.float32)
+        for i in range(self.size[0]):
+            for j in range(self.size[1]):
+                loc = (i, j)
+                actions, probs = policy.get_action_probs(loc)
+                for a in actions:
+                    q = get_return(loc, a, self.env, policy, episode_length, gamma)
+                    q_values[loc][a] = q
+        return q_values
+
     def draw_state_values(
-        self, policy: Policy, episode_length: int, num_episodes: int, gamma: float = 0.9
+        self,
+        policy: Policy,
+        q_values: np.ndarray | None = None,
+        episode_length: int | None = None,
+        num_episodes: int | None = None,
+        gamma: float = 0.9,
     ):
+        """Draw the state values of grid world. Used for IPython Note Book.
+
+        q_values or episode_length and num_episodes must be provided.
+        q_values has a higher priority.
+
+        Args:
+            policy (Policy): Policy for GridWorldEnv
+            q_values (np.ndarray | None, optional): The q values for all state-action pairs.. Defaults to None.
+            episode_length (int | None, optional): The length of episode used for sampling a q value. Defaults to None.
+            num_episodes (int | None, optional): The number of episodes used for sampling a q value. Defaults to None.
+            gamma (float, optional): The discount rate. Defaults to 0.9.
+
+        Raises:
+            ValueError: If q_values is None, episode_length and num_episodes must be provided. If q_values is provided, it must have the shape (*self.size, 5).
+        """
+        if q_values is None:
+            if episode_length is None or num_episodes is None:
+                raise ValueError(
+                    "episode_length and num_episodes must be provided, if q_values is None."
+                )
+            q_values = self._sample_q_values(episode_length, policy, gamma)
+        elif q_values.shape != (*self.size, 5):
+            raise ValueError(
+                f"q_values must have the shape {(*self.size, 5)}, but got {q_values.shape}."
+            )
+        elif not np.issubdtype(q_values.dtype, np.floating):
+            print("Warning: q_values is not float type. Convert it to float")
+            q_values = q_values.astype(np.float32)
+
+        if q_values is not None and (
+            episode_length is not None or num_episodes is not None
+        ):
+            print(
+                "Warning: q_values is provided. episode_length and num_episodes are ignored."
+            )
+
         import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots()
 
         self._draw_mesh(ax)
-        # draw state value
+        # draw state values
         for i in range(self.size[0]):
             for j in range(self.size[1]):
                 loc = (i, j)
-                actions, probs = policy.get_action_probs(loc)
-                q_values = np.zeros(5, dtype=np.float32)
-                for a in actions:
-                    q = [
-                        get_return(loc, a, self.env, policy, episode_length, gamma)
-                        for _ in range(num_episodes)
-                    ]
-                    q_values[a] = np.mean(q, dtype=np.float32)
-                v: np.ndarray = (q_values * probs).sum(dtype=np.float32)
+                _, probs = policy.get_action_probs(loc)
+                q = q_values[loc]
+                v: np.ndarray = (q * probs).sum(dtype=np.float32)
                 x_center, y_center = j + 0.5, self.size[0] - i - 0.5
                 ax.text(
                     x_center,
