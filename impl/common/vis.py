@@ -109,8 +109,7 @@ class Visualizer:
         for i in range(self.size[0]):
             for j in range(self.size[1]):
                 loc = (i, j)
-                actions, probs = policy.get_action_probs(loc)
-                for a in actions:
+                for a in range(5):
                     q = get_return(loc, a, self.env, policy, episode_length, gamma)
                     q_values[loc][a] = q
         return q_values
@@ -138,6 +137,13 @@ class Visualizer:
         Raises:
             ValueError: If q_values is None, episode_length and num_episodes must be provided. If q_values is provided, it must have the shape (*self.size, 5).
         """
+        if q_values is not None and (
+            episode_length is not None or num_episodes is not None
+        ):
+            print(
+                "Warning: q_values is provided. episode_length and num_episodes are ignored."
+            )
+
         if q_values is None:
             if episode_length is None or num_episodes is None:
                 raise ValueError(
@@ -151,13 +157,6 @@ class Visualizer:
         elif not np.issubdtype(q_values.dtype, np.floating):
             print("Warning: q_values is not float type. Convert it to float")
             q_values = q_values.astype(np.float32)
-
-        if q_values is not None and (
-            episode_length is not None or num_episodes is not None
-        ):
-            print(
-                "Warning: q_values is provided. episode_length and num_episodes are ignored."
-            )
 
         import matplotlib.pyplot as plt
 
