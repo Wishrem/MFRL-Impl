@@ -1,13 +1,12 @@
 import numpy as np
-import gymnasium as gym
 
-import envs  # for registering the environment
-from test.utils import is_same_array
+from envs import make_gridworld
+from tests.utils import is_same_array
 from common.policy import Policy
 
 
 class TestPolicy:
-    env = gym.make("gridworld-v0", size=5)
+    env = make_gridworld(size=5)
 
     def test_init(self):
         policy = Policy(self.env, eps=0.1)
@@ -43,4 +42,3 @@ class TestPolicy:
         q_values = np.array([0, 1, 0, 0, 0])
         policy.improve((0, 0), q_values)
         assert policy.action_stars[0, 0] == 1
-

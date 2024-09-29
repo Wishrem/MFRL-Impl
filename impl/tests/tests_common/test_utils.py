@@ -1,15 +1,13 @@
 import numpy as np
-import gymnasium as gym
 
-import envs  # for registering the environment
+from envs import make_gridworld
 from envs.grid_world import ForbiddenAreaCfg, RewardCfg
 from common.utils import get_return, get_episode, SARPair
 from common.policy import Policy
 
 
 class TestUtils:
-    env = gym.make(
-        "gridworld-v0",
+    env = make_gridworld(
         size=2,
         target_loc=(1, 1),
         forbidden_area_cfg=ForbiddenAreaCfg(locs=[(0, 1)]),

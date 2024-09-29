@@ -1,0 +1,31 @@
+[project]
+name = "mfrl-impl"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Wishrem", email = "wishremm@gmail.com" }
+]
+dependencies = [
+    "numpy>=2.1.1",
+    "matplotlib>=3.9.2",
+    "gymnasium>=0.29.1",
+]
+readme = "README.md"
+requires-python = ">= 3.12"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "pytest>=8.3.3",
+    "pre-commit>=3.8.0",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["common", "envs", "tests"]
