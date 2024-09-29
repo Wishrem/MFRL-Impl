@@ -4,12 +4,12 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
+from envs.grid_world import GridWorldEnv
 from .policy import Policy
 from .utils import get_return
 
 
 class Visualizer:
-
     # white for normal area, yellow for forbidden area, blue for target area
     cmap = ListedColormap(["#F8F1E5", "#FFECB3", "#6FA3EF"])  # white, yellow, blue
     arrow_directions = {
@@ -18,19 +18,48 @@ class Visualizer:
         2: (0.0, -1.0),  # down
         3: (-1.0, 0.0),  # left
     }
+    star_coords = np.array(
+        [
+            (0, 1),
+            (0.2245, 0.309),
+            (0.9511, 0.309),
+            (0.3633, -0.118),
+            (0.5878, -0.809),
+            (0, -0.382),
+            (-0.5878, -0.809),
+            (-0.3633, -0.118),
+            (-0.9511, 0.309),
+            (-0.2245, 0.309),
+            (0, 1),
+        ],
+        dtype=np.float16,
+    )
 
     def __init__(self, env: gym.Env):
         self.env = env
         # tuple type for indexing and sizing
-        self.size: tuple[int, int] = env.unwrapped.size  # type: ignore
-        self.target_loc = tuple(env.unwrapped._target_loc)  # type: ignore
-        self.forbidden_locs: np.ndarray = env.unwrapped._forbidden_locs  # type: ignore
-        self.start_loc = tuple(env.unwrapped._start_loc)  # type: ignore
+        grid_world: GridWorldEnv = env.unwrapped  # type: ignore
+        self.size = grid_world.size
+        self.target_loc: tuple[int, int] = tuple(grid_world.target_loc)
+        self.forbidden_locs = grid_world._forbidden_locs
+        self.start_loc: tuple[int, int] = tuple(grid_world.start_loc)
+        self.action_to_direction = grid_world._action_to_direction
+
+        self._check_grid_world_properties()
+
+    def _check_grid_world_properties(self):
+        if len(self.size) != 2:
+            raise ValueError("size must have 2 elements")
+        if len(self.target_loc) != 2:
+            raise ValueError("target_loc must have 2 elements")
+        if len(self.start_loc) != 2:
+            raise ValueError("start_loc must have 2 elements")
 
     def _draw_mesh(self, ax: plt.Axes):
         num_row, num_col = self.size
-        x, y = np.linspace(0, num_row, num_row + 1), np.linspace(
-            0, num_col, num_col + 1
+        x, y = (
+            np.linspace(0, num_row, num_row + 1),
+            np.linspace(0, num_col, num_col + 1),
         )
         X, Y = np.meshgrid(x, y)
 
@@ -82,7 +111,19 @@ class Visualizer:
         )
         ax.add_patch(circle)
 
-    def draw_strategy(self, policy: Policy):
+    def _draw_start_loc(self, loc: tuple[int, int], ax: plt.Axes):
+        from matplotlib import patches
+
+        x_center, y_center = loc[1] + 0.5, self.size[0] - loc[0] - 0.5
+
+        scale = 0.2
+        scaled_coords = [
+            (x * scale + x_center, y * scale + y_center) for x, y in self.star_coords
+        ]
+        polygon = patches.Polygon(scaled_coords, closed=True, color="orange")
+        ax.add_patch(polygon)
+
+    def draw_strategy(self, policy: Policy, with_trajectory: bool = False):
         """Draw the strategy of grid world. Used for IPython Note Book.
 
         Args:
@@ -93,6 +134,29 @@ class Visualizer:
         fig, ax = plt.subplots()
 
         self._draw_mesh(ax)
+
+        if with_trajectory:
+            trajectory: list[tuple[int, int]] = [
+                self.start_loc
+            ]  # convenient for drawing the trajectory
+            nxt_loc = self.start_loc
+            self._draw_start_loc(self.start_loc, ax)
+            while not self.reach_end(trajectory[1:], nxt_loc):
+                cur_loc = nxt_loc
+                last_loc = trajectory[-1]
+                trajectory.append(cur_loc)
+
+                x1, x2 = cur_loc[1] + 0.5, last_loc[1] + 0.5
+                y1, y2 = (
+                    self.size[0] - cur_loc[0] - 0.5,
+                    self.size[0] - last_loc[0] - 0.5,
+                )
+                ax.plot([x1, x2], [y1, y2], "-", color="blue", lw=0.5)
+                action = policy.get_action(cur_loc, True)
+                nxt_loc = tuple(
+                    np.add(nxt_loc, self.action_to_direction[action]).astype(int)
+                )
+
         # draw arrow with probability
         for i in range(self.size[0]):
             for j in range(self.size[1]):
@@ -183,3 +247,32 @@ class Visualizer:
 
         fig.tight_layout()
         plt.show()
+
+    def reach_end(
+        self, trajectory: list[tuple[int, int]], nxt_loc: tuple[int, int]
+    ) -> bool:
+        """Check if the trajectory reaches the path end, including forming a circle or getting out of the grid world.
+        Args:
+            trajectory (list[np.ndarray]): The trajectory of the agent.
+            action (int): The action to be taken on a specific state.
+        """
+
+        if len(trajectory) == 0:
+            return False
+
+        cur_loc = trajectory[-1]
+        if cur_loc == self.target_loc:
+            return True
+
+        if nxt_loc in trajectory:
+            return True
+
+        if (
+            nxt_loc[0] < 0
+            or nxt_loc[0] >= self.size[0]
+            or nxt_loc[1] < 0
+            or nxt_loc[1] >= self.size[1]
+        ):
+            return True
+
+        return False

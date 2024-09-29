@@ -58,9 +58,14 @@ class Policy:
                 probs.append(prob)
         return actions, probs
 
-    def get_action(self, loc: tuple[int, int] | np.ndarray) -> int:
+    def get_action(
+        self, loc: tuple[int, int] | np.ndarray, deterministic: bool = False
+    ) -> int:
         self._check_loc(loc)
 
+        if deterministic:
+            idx = tuple(loc)
+            return self.action_stars[idx]
         actions, probs = self.get_action_probs(loc)
 
         return np.random.choice(actions, 1, p=probs).item()
