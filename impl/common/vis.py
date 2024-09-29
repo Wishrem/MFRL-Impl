@@ -10,8 +10,8 @@ from .utils import get_return
 
 
 class Visualizer:
-    # white for normal area, yellow for forbidden area, blue for target area
-    cmap = ListedColormap(["#F8F1E5", "#FFECB3", "#6FA3EF"])  # white, yellow, blue
+    # normal area, forbidden area, target area
+    cmap = ListedColormap(["#ffffff", "#ffc000", "#28a0dd"])
     arrow_directions = {
         0: (0.0, 1.0),  # up
         1: (1.0, 0.0),  # right
@@ -78,7 +78,7 @@ class Visualizer:
         ax.set_ylim(y.min(), y.max())
 
         # draw grid line
-        ax.grid(True, which="both", color="black", linestyle="-", linewidth=2)
+        ax.grid(True, which="both", color="black", linestyle="-", linewidth=1)
         ax.tick_params(labelbottom=False, labelleft=False)
 
     def _draw_arrow(
@@ -91,7 +91,7 @@ class Visualizer:
 
         for a, p in zip(actions[:4], probs[:4]):
             dx, dy = self.arrow_directions[a]
-            arrow_len = 0.2 * p
+            arrow_len = 0.35 * p
             dx, dy = dx * arrow_len, dy * arrow_len
             ax.arrow(
                 x_center,
@@ -99,15 +99,15 @@ class Visualizer:
                 dx,
                 dy,
                 head_width=0.2 * arrow_len,
-                head_length=0.4 * arrow_len,
-                fc="darkgreen",
-                ec="darkgreen",
+                head_length=0.2 * arrow_len,
+                fc="#5f8926",
+                ec="#5f8926",
             )
 
         # action 5: stay
-        radius = 0.2 * probs[4]
+        radius = 0.15 * probs[4]
         circle = patches.Circle(
-            (x_center, y_center), radius, color="darkgreen", fill=False, lw=2
+            (x_center, y_center), radius, color="#5f8926", fill=False, lw=2
         )
         ax.add_patch(circle)
 
@@ -116,11 +116,11 @@ class Visualizer:
 
         x_center, y_center = loc[1] + 0.5, self.size[0] - loc[0] - 0.5
 
-        scale = 0.2
+        scale = 0.15
         scaled_coords = [
             (x * scale + x_center, y * scale + y_center) for x, y in self.star_coords
         ]
-        polygon = patches.Polygon(scaled_coords, closed=True, color="orange")
+        polygon = patches.Polygon(scaled_coords, closed=True, color="#e62100")
         ax.add_patch(polygon)
 
     def draw_strategy(self, policy: Policy, with_trajectory: bool = False):
@@ -151,7 +151,7 @@ class Visualizer:
                     self.size[0] - cur_loc[0] - 0.5,
                     self.size[0] - last_loc[0] - 0.5,
                 )
-                ax.plot([x1, x2], [y1, y2], "-", color="blue", lw=0.5)
+                ax.plot([x1, x2], [y1, y2], "-", color="#2b8ac8", lw=0.5)
                 action = policy.get_action(cur_loc, True)
                 nxt_loc = tuple(
                     np.add(nxt_loc, self.action_to_direction[action]).astype(int)
