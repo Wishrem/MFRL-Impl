@@ -67,7 +67,6 @@ class RewardCfg:
 
 
 class GridWorldEnv(gym.Env):
-
     def __init__(
         self,
         start_loc: tuple[int, int] = (0, 0),
@@ -85,12 +84,12 @@ class GridWorldEnv(gym.Env):
             forbidden_area_cfg (ForbiddenAreaCfg, optional): forbidden area configuration. Defaults to ForbiddenAreaCfg().
             reward_cfg (RewardCfg, optional): reward configuration. Defaults to RewardCfg().
         """
-        self.size = size if isinstance(size, tuple) else (size, size)
+        self._size = size if isinstance(size, tuple) else (size, size)
         self._rwd_cfg = reward_cfg
         self._start_loc = np.array(start_loc, dtype=np.int32)
         self._agent_loc = self._start_loc
 
-        forbidden_locs = forbidden_area_cfg.get_locs(self.size)
+        forbidden_locs = forbidden_area_cfg.get_locs(self._size)
         if target_loc is None:
             target_loc = self._generate_random_target_loc(forbidden_locs)
         elif target_loc in forbidden_locs:
@@ -104,7 +103,7 @@ class GridWorldEnv(gym.Env):
             {
                 "agent_loc": spaces.Box(
                     low=np.array([0, 0]),
-                    high=np.array(self.size),
+                    high=np.array(self._size),
                     shape=(2,),
                     dtype=np.int32,
                 ),
@@ -124,7 +123,7 @@ class GridWorldEnv(gym.Env):
     def step(self, action: int):
         direction = self._action_to_direction[action]
         new_loc = self._agent_loc + direction
-        if np.any(new_loc < 0) or np.any(new_loc >= self.size):
+        if np.any(new_loc < 0) or np.any(new_loc >= self._size):
             reward = self._rwd_cfg.out_of_bound
         elif np.all(new_loc == self._target_loc):
             reward = self._rwd_cfg.target
@@ -154,9 +153,21 @@ class GridWorldEnv(gym.Env):
 
         return self._get_obs(), {}
 
+    @property
+    def target_loc(self):
+        return self._target_loc
+
+    @property
+    def start_loc(self):
+        return self._start_loc
+
+    @property
+    def size(self):
+        return self._size
+
     def _generate_random_target_loc(
         self, forbidden_locs: list[tuple[int, int]]
     ) -> tuple[int, int]:
-        locs = [(i, j) for i in range(self.size[0]) for j in range(self.size[1])]
+        locs = [(i, j) for i in range(self._size[0]) for j in range(self._size[1])]
         locs = [loc for loc in locs if loc not in forbidden_locs]
         return locs[np.random.randint(len(locs))]
